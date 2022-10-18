@@ -1,0 +1,26 @@
+{
+    "version": "0.2",
+    "ignorePaths": [
+        "go.sum",
+        "go.mod",
+        "cspell.json",
+        ".vscode/*"
+    ],
+    "dictionaries": [
+        "ru-ru",
+        "custom"
+    ],
+    "words": [
+        "Delimeter",
+        "usecase",
+        "ilyakaznacheev",
+        "cleanenv",
+        "apkg",
+        "YCAJ",
+        "Niyzkk",
+        "таргетном"
+    ],
+    "ignoreWords": [],
+    "import": ["@cspell/dict-ru_ru/cspell-ext.json"],
+    "enableFiletypes": []
+}
