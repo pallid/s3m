@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"s3m/infrastructure/aws"
 	"s3m/infrastructure/tgbot"
 	"s3m/internal/entity"
 	"sort"
 	"strings"
+	"time"
 
 	apkg "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -18,9 +21,10 @@ import (
 )
 
 const (
-	TEMP_DELETE = "УДАЛЕН %s измененный %s"
-	TEMP_SKIP   = "ПРОПУЩЕН %s измененный %s"
-	layout      = "02.01.2006 15:04:05"
+	TEMP_DELETE     = "УДАЛЕН %s измененный %s"
+	TEMP_SKIP       = "ПРОПУЩЕН %s измененный %s"
+	layout          = "02.01.2006 15:04:05"
+	layoutNowFolder = "02-01-2006"
 )
 
 type ClearUseCase struct {
@@ -29,17 +33,19 @@ type ClearUseCase struct {
 	s3prefix    string
 	s3delimeter string
 	folderSkip  int
+	source      string
 	tgBot       *tgbotapi.BotAPI
 	tgChatID    int64
 }
 
-func NewClearUseCase(client *s3.Client, folderSkip int, s3bucket, s3prefix, s3delimeter string, tgBot *tgbotapi.BotAPI, tgChatID int64) ClearUseCase {
+func NewClearUseCase(client *s3.Client, folderSkip int, s3bucket, s3prefix, s3delimeter string, source string, tgBot *tgbotapi.BotAPI, tgChatID int64) ClearUseCase {
 	return ClearUseCase{
 		s3cli:       client,
 		s3bucket:    s3bucket,
 		s3prefix:    s3prefix,
 		s3delimeter: s3delimeter,
 		folderSkip:  folderSkip,
+		source:      source,
 		tgBot:       tgBot,
 		tgChatID:    tgChatID,
 	}
@@ -99,7 +105,7 @@ func (uc ClearUseCase) Clear() error {
 	}
 
 	if uc.tgBot != nil && len(messages) != 0 {
-		msg := tgbot.NewMessage(uc.tgChatID, generateClearMessages(messages))
+		msg := tgbot.NewMessage(uc.tgChatID, generateClearMessage(messages))
 		_, err := uc.tgBot.Send(msg)
 		if err != nil {
 			log.Println(err)
@@ -109,8 +115,73 @@ func (uc ClearUseCase) Clear() error {
 	return nil
 }
 
-func generateClearMessages(messages []string) string {
+func (uc ClearUseCase) Copy() error {
+
+	nowFolder := time.Now().Format(layoutNowFolder)
+	walker := make(fileWalk)
+	go func() {
+		// Gather the files to upload by walking the path recursively
+		if err := filepath.Walk(uc.source, walker.Walk); err != nil {
+			log.Fatalln("Walk failed:", err)
+		}
+		close(walker)
+	}()
+
+	for path := range walker {
+		rel, err := filepath.Rel(uc.source, path)
+		if err != nil {
+			log.Fatalln("Unable to get relative path:", path, err)
+		}
+		file, err := os.Open(path)
+		if err != nil {
+			log.Println("Failed opening file", path, err)
+			continue
+		}
+		defer file.Close()
+		filePath := filepath.Join(uc.s3prefix, nowFolder, rel)
+		filePath = strings.ReplaceAll(filePath, "\\", "/")
+		err = aws.PutObject(uc.s3cli, uc.s3bucket, filePath, file)
+		if err != nil {
+			log.Fatalln("Failed to upload", path, err)
+		}
+		log.Println("Uploaded", path, filePath)
+	}
+
+	var messages []string
+	messages = append(messages, "Добавлен новый архив "+nowFolder)
+	if uc.tgBot != nil && len(messages) != 0 {
+		msg := tgbot.NewMessage(uc.tgChatID, generateCopyMessage(messages))
+		_, err := uc.tgBot.Send(msg)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	return nil
+}
+
+type fileWalk chan string
+
+func (f fileWalk) Walk(path string, info os.FileInfo, err error) error {
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		f <- path
+	}
+	return nil
+}
+
+func generateClearMessage(messages []string) string {
 	text := "Результаты очистки старых каталогов: \n"
+	for i := range messages {
+		text = text + fmt.Sprintln(messages[i])
+	}
+	return text
+}
+
+func generateCopyMessage(messages []string) string {
+	text := "Копирование в S3: \n"
 	for i := range messages {
 		text = text + fmt.Sprintln(messages[i])
 	}

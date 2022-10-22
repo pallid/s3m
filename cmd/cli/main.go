@@ -22,6 +22,8 @@ var folderSkip int
 var tgToken string
 var tgChat int
 
+var source string
+
 var defaultDelimeter string
 var defaultChatID int
 
@@ -33,22 +35,34 @@ const (
 )
 
 func main() {
+	fs := &flag.FlagSet{}
+	fs.StringVar(&accessKey, "access-key", "", "s3 login")
+	fs.StringVar(&secretKey, "secret-key", "", "s3 secret")
+	fs.StringVar(&url, "url", defaultUrl, "s3 url")
+	fs.StringVar(&bucket, "bucket", "", "s3 bucket")
+	fs.StringVar(&prefix, "prefix", "", "path prefix")
+	fs.StringVar(&region, "region", defaultRegion, "s3 region")
+	fs.StringVar(&partition, "partition", defaultPartition, "s3 partition")
+	fs.StringVar(&tgToken, "tg-token", "", "tg bot token")
+	fs.IntVar(&tgChat, "tg-chat", defaultChatID, "tg chat id")
 
-	flag.StringVar(&accessKey, "access-key", "", "s3 login")
-	flag.StringVar(&secretKey, "secret-key", "", "s3 secret")
-	flag.StringVar(&url, "url", defaultUrl, "s3 url")
-	flag.StringVar(&bucket, "bucket", "", "s3 bucket")
-	flag.StringVar(&prefix, "prefix", "", "path prefix")
-	flag.StringVar(&region, "region", defaultRegion, "s3 region")
-	flag.StringVar(&partition, "partition", defaultPartition, "s3 partition")
-	flag.IntVar(&folderSkip, "skip", defaultFoldersSkip, "skip folders")
-	flag.StringVar(&tgToken, "tg-token", "", "tg bot token")
-	flag.IntVar(&tgChat, "tg-chat", defaultChatID, "tg chat id")
+	subcommand := os.Args[1]
+	switch subcommand {
+	case app.CmdClear:
+		fs.IntVar(&folderSkip, "skip", defaultFoldersSkip, "skip folders")
+	case app.CmdCopy:
+		fs.StringVar(&source, "source", "", "source path for copy")
+	default:
+		fmt.Println("Need subcommand (copy, clear)", flag.Arg(0))
+		os.Exit(1)
+	}
 
-	flag.Parse()
+	fs.Parse(os.Args[2:])
 
-	if flag.NArg() != 0 {
-		fmt.Println("All arguments must have -key before them. Incorrect argument:", flag.Arg(0))
+	// res := flag.NArg()
+	// fmt.Println(res)
+	if fs.NArg() != 0 {
+		fmt.Println("All arguments must have -key before them. Incorrect argument:", fs.Arg(0))
 		os.Exit(1)
 	}
 
@@ -72,6 +86,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if subcommand == app.CmdCopy && source == "" {
+		fmt.Println("-source is mandatory")
+		os.Exit(1)
+	}
+
 	cfg := config.Config{
 		AWS: aws.Config{
 			AccessKey:     accessKey,
@@ -83,7 +102,9 @@ func main() {
 			URL:           url,
 			SigningRegion: region,
 		},
+		Subcommand: subcommand,
 		FolderSkip: folderSkip,
+		Source:     source,
 		TG: struct {
 			BotToken string
 			ChatID   int64

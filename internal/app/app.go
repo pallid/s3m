@@ -9,9 +9,15 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+const (
+	CmdClear = "clear"
+	CmdCopy  = "copy"
+)
+
 type App struct {
 	// logger  log.Logger
 	usClear usecase.ClearUseCase
+	cmd     string
 }
 
 func New(cfg *config.Config) (App, error) {
@@ -34,13 +40,21 @@ func New(cfg *config.Config) (App, error) {
 		cfg.AWS.Bucket,
 		cfg.AWS.Prefix,
 		cfg.AWS.Delimeter,
+		cfg.Source,
 		tgBot,
 		cfg.TG.ChatID,
 	)
+	app.cmd = cfg.Subcommand
 
 	return app, nil
 }
 
 func (a App) Run() error {
-	return a.usClear.Clear()
+	switch a.cmd {
+	case CmdClear:
+		return a.usClear.Clear()
+	case CmdCopy:
+		return a.usClear.Copy()
+	}
+	return nil
 }

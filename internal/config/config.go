@@ -10,7 +10,9 @@ import (
 
 type Config struct {
 	AWS        aws.Config
+	Subcommand string
 	FolderSkip int
+	Source     string
 	TG         struct {
 		BotToken string
 		ChatID   int64

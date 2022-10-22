@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"io"
 	"log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -58,6 +59,15 @@ func DeleteObjects(client *s3.Client, bucket string, deleted []types.ObjectIdent
 		Delete: &types.Delete{
 			Objects: deleted,
 		},
+	})
+	return err
+}
+
+func PutObject(client *s3.Client, bucket, filePath string, body io.Reader) error {
+	_, err := client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(filePath),
+		Body:   body,
 	})
 	return err
 }
