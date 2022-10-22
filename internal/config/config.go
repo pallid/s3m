@@ -11,6 +11,10 @@ import (
 type Config struct {
 	AWS        aws.Config
 	FolderSkip int
+	TG         struct {
+		BotToken string
+		ChatID   int64
+	}
 }
 
 var instance *Config

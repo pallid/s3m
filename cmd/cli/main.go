@@ -19,7 +19,11 @@ var region string
 var partition string
 var folderSkip int
 
+var tgToken string
+var tgChat int
+
 var defaultDelimeter string
+var defaultChatID int
 
 const (
 	defaultUrl         = "https://storage.yandexcloud.net"
@@ -38,6 +42,8 @@ func main() {
 	flag.StringVar(&region, "region", defaultRegion, "s3 region")
 	flag.StringVar(&partition, "partition", defaultPartition, "s3 partition")
 	flag.IntVar(&folderSkip, "skip", defaultFoldersSkip, "skip folders")
+	flag.StringVar(&tgToken, "tg-token", "", "tg bot token")
+	flag.IntVar(&tgChat, "tg-chat", defaultChatID, "tg chat id")
 
 	flag.Parse()
 
@@ -78,6 +84,13 @@ func main() {
 			SigningRegion: region,
 		},
 		FolderSkip: folderSkip,
+		TG: struct {
+			BotToken string
+			ChatID   int64
+		}{
+			BotToken: tgToken,
+			ChatID:   int64(tgChat),
+		},
 	}
 	a, err := app.New(&cfg)
 	if err != nil {
