@@ -6,18 +6,49 @@
 
 (TODO) Надо описать установку
 
-## Аргументы запуска
+## Общие аргументы запуска
 
-(TODO) Надо описать аргументы запуска
+Общие:
+| параметр | описание |
+|---|---|
+| -access-key *  | имя учетной записи для s3 |
+| -secret-key * | секретный ключ учетной записи s3 |
+| -bucket * | имя корзины s3 |
+| -prefix * | путь до директории | 
+| -tg-token | токен от телеграм бота |
+| -tg-chat | идентификатор канала дл оповещения |
+
+## Копирование
+
+аргументы:
+| параметры | описание|
+|---|---|
+| -source * | путь на хосте из которого необходимо сделать копирование в s3 |
+
+Пример запуска копирование
+```bash
+s3m copy -access-key <access> -secret-key <secret> -bucket my-bucket -prefix backups/ -source /Users/dev/backups/
+
+// output:
+// Uploaded /Users/dev/backups/test1.fig
+// Uploaded /Users/dev/backups/test2.fig
+```
+
 
 ## Удаление
 
 удаление старых папок с архивами, остаются n последних папок в таргетном каталоге
 
+аргументы:
+| параметры | описание|
+|---|---|
+| -skip | количество последних резервных копий, которые не будут удалены, по умолчанию 7 |
+
+
 ### Пример запуска удаления
 
 ```bash
-s3m -access-key <access> -secret-key <secret> -bucket my-bucket -prefix backups/ -skip 7
+s3m clear -access-key <access> -secret-key <secret> -bucket my-bucket -prefix backups/ -skip 7
 
 // output:
 // 2022/10/18 00:06:59 SKIP 17-10-2022 mod 2022-10-17 00:20:34.49 +0000 UTC
